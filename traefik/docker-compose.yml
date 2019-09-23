@@ -1,0 +1,47 @@
+version: '3'
+
+services:
+  traefik:
+    # The official v2.0 Traefik docker image
+    image: traefik:v2.0
+    # Enables the web UI and tells Traefik to listen to docker
+    command: --api.insecure=true --providers.docker
+    ports:
+      # The HTTP port
+      - "80:80"
+      # The Web UI (enabled by --api.insecure=true)
+      - "8080:8080"
+    volumes:
+      # So that Traefik can listen to the Docker events
+      - /var/run/docker.sock:/var/run/docker.sock
+    container_name: traefik
+    restart: always
+  whoami:
+    image: containous/whoami
+    labels:
+      - "traefik.http.routers.whoami.rule=Host(`whoami.docker.localhost`)"
+  ghost:
+    image: ghost:1-alpine
+    restart: always
+    ports:
+      - 2368
+    volumes:
+      - ./blog:/var/lib/ghost/content
+    labels:
+      - "traefik.backend=ghost"
+      - "traefik.port=2368"
+      - "traefik.http.routers.blog.rule=Host(`blog.docker.localhost`)"
+  db:
+    image: mysql
+    command: --default-authentication-plugin=mysql_native_password
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: example
+
+  adminer:
+    image: adminer
+    restart: always
+    ports:
+      - 8081:8080
+    labels:
+      - "traefik.http.routers.adminer.rule=Host(`adminer.docker.localhost`)"
