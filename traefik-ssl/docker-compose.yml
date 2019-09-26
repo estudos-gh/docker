@@ -1,0 +1,66 @@
+version: "3.3"
+
+services:
+
+  traefik:
+    image: "traefik:v2.0.0-rc3"
+    container_name: "traefik"
+    command:
+      #- "--log.level=DEBUG"
+      # Traefik will listen on port 8080 by default for API request.
+      - "--api.insecure=true"
+      # Enabling docker provider
+      - "--providers.docker=true"
+      # Do not expose containers unless explicitly told so
+      - "--providers.docker.exposedbydefault=false"
+      # Traefik will listen to incoming request on the port 80 (HTTP)
+      - "--entrypoints.web.address=:80"
+      # Traefik will listen to incoming request on the port 443 (https)
+      - "--entrypoints.websecure.address=:443"
+      # Enable a http challenge named "myhttpchallenge"
+      - "--certificatesresolvers.myhttpchallenge.acme.httpchallenge=true"
+      # Enable a http challenge named "myhttpchallenge"
+      - "--certificatesresolvers.myhttpchallenge.acme.httpchallenge.entrypoint=web"
+      #- "--certificatesresolvers.myhttpchallenge.acme.caserver=https://acme-staging-v02.api.letsencrypt.org/directory"
+      # The email to provide to let's encrypt
+      - "--certificatesresolvers.myhttpchallenge.acme.email=gabriel.henrique@polichat.com.br"
+      # Tell to store the certificate on a path under our volume
+      - "--certificatesresolvers.myhttpchallenge.acme.storage=/letsencrypt/acme.json"
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"
+    volumes:
+      # Create a letsencrypt dir within the folder where the docker-compose file is
+      - "./letsencrypt:/letsencrypt"
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+
+  whoami:
+    image: "containous/whoami"
+    container_name: "whoami1"
+    labels:
+      # Explicitly tell Traefik to expose this container
+      - "traefik.enable=true"
+      # The domain the service will respond to
+      - "traefik.http.routers.whoami.rule=Path(`/whoami1`)"
+      # Allow request only from the predefined entry point named "web"
+      #- "traefik.http.routers.whoami.entrypoints=web"
+      # Allow request only from the predefined entry point named "websecure"
+      - "traefik.http.routers.whoami.entrypoints=websecure"
+      # Uses the Host rule to define which certificate to issue
+      - "traefik.http.routers.whoami.tls.certresolver=myhttpchallenge"
+
+  whoami2:
+    image: "containous/whoami"
+    container_name: "whoami2"
+    labels:
+      # Explicitly tell Traefik to expose this container
+      - "traefik.enable=true"
+      # The domain the service will respond to
+      - "traefik.http.routers.whoami2.rule=Path(`/whoami2`)"
+      # Allow request only from the predefined entry point named "web"
+      #- "traefik.http.routers.whoami2.entrypoints=web"
+      # Allow request only from the predefined entry point named "websecure"
+      - "traefik.http.routers.whoami2.entrypoints=websecure"
+      # Uses the Host rule to define which certificate to issue
+      - "traefik.http.routers.whoami2.tls.certresolver=myhttpchallenge"
